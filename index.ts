@@ -11,15 +11,15 @@ const cerbos = new HTTP("http://localhost:3592", {
 });
 
 (async () => { 
-  const policyPath = path.resolve(__dirname, 'policies/table.yaml');
+  const resourcePolicyPath = path.resolve(__dirname, 'policies/table.yaml');
   const rolePath = path.resolve(__dirname, 'policies/roles.yaml');
 
+  // Table resource and common_derived_roles policy are loaded from the policies folder.
   await cerbos.addOrUpdatePolicies({
-    policies: [await readPolicy(policyPath), await readPolicy(rolePath)],
-  });
-
-  await cerbos.addOrUpdatePolicies({
-    policies: [{
+    policies: [
+      await readPolicy(resourcePolicyPath), 
+      await readPolicy(rolePath),
+    {
       /**
        * We can create a new policy, although this replaces the existing policy with the same resource and version. Hence, version:2 is being used below. 
        * Would be checking with their team to see if there is a way to add a new policy without replacing the existing one.
