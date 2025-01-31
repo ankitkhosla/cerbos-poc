@@ -28,7 +28,7 @@ async function bootstrapInitialPolicies() {
   });
 }
 
-async function addRuleToResource(policyId: string, rule: ResourceRule) {
+async function addRuleToResource(policyId: string, scope: string, rule: ResourceRule) {
   // When adding a policy it needs to be read, mutatated and then written back
   // as a complete policy so the PDP can validate it.
   // Load the policy
@@ -36,6 +36,10 @@ async function addRuleToResource(policyId: string, rule: ResourceRule) {
 
   if (!policy || !policyIsResourcePolicy(policy)) {
     throw new Error("Policy not found");
+  }
+
+  if (scope != "") {
+    policy.resourcePolicy.scope = scope;
   }
 
   // Add the rule
@@ -49,20 +53,18 @@ async function addRuleToResource(policyId: string, rule: ResourceRule) {
 
 (async () => {
   await bootstrapInitialPolicies();
-
-  console.log(`Loaded policies:`, (await cerbos.listPolicies()).ids);
-
-  addRuleToResource("resource.table.vdefault", {
+  
+  addRuleToResource("resource.table.vdefault", "", {
     name: "allow_update_columns",
     actions: ["update:columns"],
-    roles: ["USER"],
+    derivedRoles: ["ORG_USER"],
     effect: Effect.ALLOW,
     condition: {
       match: {
         all: {
           of: [
             {
-              expr: "P.id == R.attr.createdByUserId",
+              expr: "P.id == R.attr.createdByUserId || P.id in R.attr.allowedUserIds",
             },
           ],
         },
@@ -85,7 +87,7 @@ async function addRuleToResource(policyId: string, rule: ResourceRule) {
           rules: [
             {
               resource: "table",
-              allowActions: ["view:columns"],
+              allowActions: ["create", "view:columns", "update:columns"],
             },
           ],
         },
@@ -97,7 +99,7 @@ async function addRuleToResource(policyId: string, rule: ResourceRule) {
     includeMetadata: true,
     principal: {
       id: "user_1",
-      roles: ["USER", "COLUMN_VIEWER"], // COLUMN_VIEWER role can be reused and added to any group/user
+      roles: ["USER"], // COLUMN_VIEWER role can be reused and added to any group/user
       attr: {
         tenantId: "tenant_1",
         organizationId: "org_1",
@@ -106,6 +108,7 @@ async function addRuleToResource(policyId: string, rule: ResourceRule) {
     resource: {
       kind: "table",
       id: "1",
+      // scope: "acme_org",
       attr: {
         tenantId: "tenant_1",
         organizationId: "org_1",
@@ -114,13 +117,8 @@ async function addRuleToResource(policyId: string, rule: ResourceRule) {
         columns: ["id", "name", "age"],
       },
     },
-    actions: ["view:columns"],
+    actions: ["update:columns", "create", "view:columns"],
   });
 
-  console.log(
-    `can user_1 view columns of table_1? ${
-      decision.isAllowed("view:columns") ? "Yes" : "No"
-    }`,
-    decision.metadata
-  );
+  console.log(decision.actions, 'METADATA:', decision.metadata);
 })();
