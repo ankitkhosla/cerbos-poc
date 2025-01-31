@@ -10,7 +10,7 @@ git clone git@github.com:ankitkhosla/cerbos-poc.git
 # Step 2
 cd cerbos-poc && npm i
 
-# Step 3 - open your terminal and run the below command
+# Step 3 - open your terminal and run the below command in a new tab
 docker run --rm --name cerbos \
   -p 3592:3592 \
   -v "$(pwd)/.cerbos.yaml:/config/.cerbos.yaml" \
