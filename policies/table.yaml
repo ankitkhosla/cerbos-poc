@@ -2,7 +2,7 @@
 ---
 apiVersion: api.cerbos.dev/v1
 resourcePolicy:
-  version: "1"
+  version: "default"
   importDerivedRoles:
     - common_roles
 
