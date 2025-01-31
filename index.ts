@@ -1,71 +1,105 @@
-import { HTTP } from'@cerbos/http'
-import { readPolicy } from"@cerbos/files"
-import * as path from'path'
-import { Effect, ScopePermissions } from '@cerbos/core';
+import { HTTP } from "@cerbos/http";
+import { readPolicy } from "@cerbos/files";
+import * as path from "path";
+import {
+  Effect,
+  policyIsResourcePolicy,
+  policyIsRolePolicy,
+  ResourceRule,
+  ScopePermissions,
+} from "@cerbos/core";
 
 const cerbos = new HTTP("http://localhost:3592", {
-  adminCredentials:{
+  adminCredentials: {
     username: "cerbos",
     password: "cerbos",
-  }
+  },
 });
 
-(async () => { 
-  const resourcePolicyPath = path.resolve(__dirname, 'policies/table.yaml');
-  const rolePath = path.resolve(__dirname, 'policies/roles.yaml');
+async function bootstrapInitialPolicies() {
+  const resourcePolicyPath = path.resolve(__dirname, "policies/table.yaml");
+  const rolePath = path.resolve(__dirname, "policies/roles.yaml");
 
   // Table resource and common_derived_roles policy are loaded from the policies folder.
   await cerbos.addOrUpdatePolicies({
     policies: [
-      await readPolicy(resourcePolicyPath), 
+      await readPolicy(resourcePolicyPath),
       await readPolicy(rolePath),
-    {
-      /**
-       * We can create a new policy, although this replaces the existing policy with the same resource and version. Hence, version:2 is being used below. 
-       * Would be checking with their team to see if there is a way to add a new policy without replacing the existing one.
-       */
-      resourcePolicy: {
-        resource: "table",
-        version: "2",
-        rules: [{
-          name: "allow_update_columns",
-          actions: ["update:columns"],
-          effect: Effect.ALLOW,
-          condition: {
-            match: {
-              all: {
-                of: [{
-                  expr: "P.id == R.attr.createdByUserId"
-                }]
-              }
-            }
-          }
-        }],
+    ],
+  });
+}
+
+async function addRuleToResource(policyId: string, rule: ResourceRule) {
+  // When adding a policy it needs to be read, mutatated and then written back
+  // as a complete policy so the PDP can validate it.
+  // Load the policy
+  const policy = await cerbos.getPolicy(policyId);
+
+  if (!policy || !policyIsResourcePolicy(policy)) {
+    throw new Error("Policy not found");
+  }
+
+  // Add the rule
+  policy.resourcePolicy.rules.push(rule);
+
+  // Write it back
+  await cerbos.addOrUpdatePolicies({
+    policies: [policy],
+  });
+}
+
+(async () => {
+  await bootstrapInitialPolicies();
+
+  addRuleToResource("resource.table.v1", {
+    name: "allow_update_columns",
+    actions: ["update:columns"],
+    roles: ["USER"],
+    effect: Effect.ALLOW,
+    condition: {
+      match: {
+        all: {
+          of: [
+            {
+              expr: "P.id == R.attr.createdByUserId",
+            },
+          ],
+        },
       },
-      /**
-       * We can create a role policy with list of allowed actions for a resource. 
-       * Conditions for those actions is checked inside the resource policy, in order to allow/deny the actions. 
-       */
-      rolePolicy: {
-        role: "COLUMN_VIEWER",
-        scopePermissions: ScopePermissions.REQUIRE_PARENTAL_CONSENT_FOR_ALLOWS,
-        rules: [{
-          resource: "table",
-          allowActions: ["view:columns"],
-        }],
+    },
+  });
+
+  await cerbos.addOrUpdatePolicies({
+    policies: [
+      {
+        /**
+         * We can create a role policy with list of allowed actions for a resource.
+         * Conditions for those actions is checked inside the resource policy, in order to allow/deny the actions.
+         */
+        rolePolicy: {
+          role: "COLUMN_VIEWER",
+          scopePermissions:
+            ScopePermissions.REQUIRE_PARENTAL_CONSENT_FOR_ALLOWS,
+          rules: [
+            {
+              resource: "table",
+              allowActions: ["view:columns"],
+            },
+          ],
+        },
       },
-    }],
+    ],
   });
 
   const decision = await cerbos.checkResource({
     includeMetadata: true,
     principal: {
       id: "user_1",
-      roles: ["USER", "COLUMN_VIEWER"], // COLUMN_VIEWER role can be reused and added to any group/user 
-      attr:{
+      roles: ["USER", "COLUMN_VIEWER"], // COLUMN_VIEWER role can be reused and added to any group/user
+      attr: {
         tenantId: "tenant_1",
-        organizationId: "org_1"
-      }
+        organizationId: "org_1",
+      },
     },
     resource: {
       kind: "table",
@@ -75,12 +109,16 @@ const cerbos = new HTTP("http://localhost:3592", {
         tenantId: "tenant_2",
         organizationId: "org_1",
         createdByUserId: "user_1",
-        whitelistedColumns:['*'],
-        columns: ['id', 'name', 'age']
-      }
+        whitelistedColumns: ["*"],
+        columns: ["id", "name", "age"],
+      },
     },
     actions: ["view:columns"],
   });
 
-  console.log(`can user_1 view columns of table_1? ${decision.isAllowed("view:columns")? 'Yes' : 'No'}`);
-})()
+  console.log(
+    `can user_1 view columns of table_1? ${
+      decision.isAllowed("view:columns") ? "Yes" : "No"
+    }`
+  );
+})();

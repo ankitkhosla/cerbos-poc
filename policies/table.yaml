@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://api.cerbos.dev/latest/cerbos/policy/v1/Policy.schema.json
 ---
 apiVersion: api.cerbos.dev/v1
 resourcePolicy:
@@ -40,4 +41,3 @@ resourcePolicy:
       condition:
         match:
           expr: (P.id == R.attr.createdByUserId || P.id in R.attr.allowedUserIds) && R.attr.whitelistedColumns[0] == '*' || hasIntersection(R.attr.columns, R.attr.whitelistedColumns)
-
