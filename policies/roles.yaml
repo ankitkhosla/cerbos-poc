@@ -1,0 +1,30 @@
+---
+apiVersion: api.cerbos.dev/v1
+description: |-
+  Common dynamic roles used within the Finance Demo app
+derivedRoles:
+  name: common_roles
+  definitions:
+    - name: TENANT
+      parentRoles: ["USER"]
+      condition:
+        match:
+          expr: P.id == R.attr.tenantId
+
+    - name: GLOBAL_ADMIN
+      parentRoles: ["USER"]
+      condition:
+        match:
+          expr: ('GLOBAL_ADMIN' in P.attr.roles && R.attr.organizationId == P.attr.organizationId)
+
+    - name: CONTAINER_DESIGNER
+      parentRoles: ["USER"]
+      condition:
+        match:
+          expr: ('CONTAINER_DESIGNER' in P.attr.roles && R.attr.organizationId == P.attr.organizationId)
+
+    - name: ORG_USER
+      parentRoles: ["USER"]
+      condition:
+        match:
+          expr: P.attr.organizationId == R.attr.organizationId

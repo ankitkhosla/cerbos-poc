@@ -1,0 +1,14 @@
+server:
+  httpListenAddr: ":3592"
+  adminAPI:
+    enabled: true
+    adminCredentials:
+      username: cerbos
+      passwordHash: JDJ5JDEwJHl3Mm5oWFpNeHYweFJDL3RHQTdWeHVsZ3hOQXUueUxTa3ZXNnNkRjg4ckkvVzJjVzcub0tPCgo=
+storage:
+  driver: "sqlite3"
+  sqlite3:
+    dsn: "file:/tmp/cerbos.sqlite?mode=rwc&cache=shared&_fk=true"
+  # disk:
+  #   directory: policies
+  #   watchForChanges: true

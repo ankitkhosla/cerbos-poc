@@ -1,0 +1,43 @@
+---
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: "1"
+  importDerivedRoles:
+    - common_roles
+
+  resource: "table"
+
+  rules:
+    - actions: ["lists", "view"]
+      effect: EFFECT_ALLOW
+      derivedRoles:
+        - TENANT
+        - GLOBAL_ADMIN
+        - ORG_USER
+      condition:
+        match:
+          any:
+            of:
+              - expr: P.id == R.attr.createdByUserId
+              - expr: P.id in R.attr.allowedUserIds
+
+    - actions: ["create", "delete", "update"]
+      effect: EFFECT_ALLOW
+      derivedRoles:
+        - TENANT
+        - GLOBAL_ADMIN
+        - ORG_USER
+      condition:
+        match:
+          expr: P.id == R.attr.createdByUserId
+
+    - actions: ["view:columns"]
+      effect: EFFECT_ALLOW
+      derivedRoles:
+        - TENANT
+        - GLOBAL_ADMIN
+        - ORG_USER
+      condition:
+        match:
+          expr: (P.id == R.attr.createdByUserId || P.id in R.attr.allowedUserIds) && R.attr.whitelistedColumns[0] == '*' || hasIntersection(R.attr.columns, R.attr.whitelistedColumns)
+
