@@ -15,7 +15,7 @@ derivedRoles:
       parentRoles: ["USER"]
       condition:
         match:
-          expr: ('GLOBAL_ADMIN' in P.attr.roles && R.attr.organizationId == P.attr.organizationId)
+          expr: ('GLOBAL_ADMIN' in P.attr.roles && is_member_of_org)
 
     - name: CONTAINER_DESIGNER
       parentRoles: ["USER"]
@@ -27,4 +27,4 @@ derivedRoles:
       parentRoles: ["USER"]
       condition:
         match:
-          expr: P.attr.organizationId == R.attr.organizationId
+          expr: is_member_of_org
