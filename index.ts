@@ -4,7 +4,6 @@ import * as path from "path";
 import {
   Effect,
   policyIsResourcePolicy,
-  policyIsRolePolicy,
   ResourceRule,
   ScopePermissions,
 } from "@cerbos/core";
@@ -51,7 +50,9 @@ async function addRuleToResource(policyId: string, rule: ResourceRule) {
 (async () => {
   await bootstrapInitialPolicies();
 
-  addRuleToResource("resource.table.v1", {
+  console.log(`Loaded policies:`, (await cerbos.listPolicies()).ids);
+
+  addRuleToResource("resource.table.vdefault", {
     name: "allow_update_columns",
     actions: ["update:columns"],
     roles: ["USER"],
@@ -80,6 +81,7 @@ async function addRuleToResource(policyId: string, rule: ResourceRule) {
           role: "COLUMN_VIEWER",
           scopePermissions:
             ScopePermissions.REQUIRE_PARENTAL_CONSENT_FOR_ALLOWS,
+          parentRoles: ["USER"],
           rules: [
             {
               resource: "table",
@@ -103,10 +105,9 @@ async function addRuleToResource(policyId: string, rule: ResourceRule) {
     },
     resource: {
       kind: "table",
-      policyVersion: "1",
       id: "1",
       attr: {
-        tenantId: "tenant_2",
+        tenantId: "tenant_1",
         organizationId: "org_1",
         createdByUserId: "user_1",
         whitelistedColumns: ["*"],
@@ -119,6 +120,7 @@ async function addRuleToResource(policyId: string, rule: ResourceRule) {
   console.log(
     `can user_1 view columns of table_1? ${
       decision.isAllowed("view:columns") ? "Yes" : "No"
-    }`
+    }`,
+    decision.metadata
   );
 })();
